@@ -6,7 +6,7 @@ const bodyParser = require('body-parser');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const PORT = process.env.PORT || 3000;
-const SITE_URL = 'https://aquanet-bot-3.onrender.com'; 
+const SITE_URL = 'http://localhost:' + PORT; 
 const ADMIN_PASSWORD = "admin";
 
 let globalDeficit = 20; 
