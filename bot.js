@@ -5,7 +5,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const SITE_URL = 'http://localhost:3000'; 
 const ADMIN_PASSWORD = "admin";
 
@@ -284,7 +284,7 @@ bot.hears(['☁️ Погода', '☁️ Аба ырайы'], (ctx) => {
 
 bot.launch();
 app.listen(PORT, () => {
-    console.log(`Site: ${SITE_URL}`);
+    console.log(`Site: ${PORT}`);
     console.log(`Bot running...`);
 });
 
