@@ -83,10 +83,8 @@ app.get('/', (req, res) => {
             if (!villages[row.village]) villages[row.village] = [];
            let cropMultiplier = 500;
         if (row.crop) {
-            const cropKey = row.crop.split(' ')[0]; // Например: "🌾 Буудай" -> "🌾"
-            // Важно: в базе хранятся полные названия с эмодзи. CROP_COEFFS использует ключ 'Буудай'. 
-            // Нужно убедиться, что ключом является сам текст без эмодзи.
-            const cleanCropKey = row.crop.split(' ')[1] || row.crop.split(' ')[0]; // Берем второе слово ('Буудай') или первое
+            const cropKey = row.crop.split(' ')[0];
+            const cleanCropKey = row.crop.split(' ')[1] || row.crop.split(' ')[0];
             cropMultiplier = CROP_COEFFS[cleanCropKey] || 500;
         }
         
@@ -99,18 +97,7 @@ app.get('/', (req, res) => {
     });
 });
 
-// app.get('/admin', (req, res) => {
-//     db.all("SELECT count(*) as count FROM farmers", (err, cRow) => {
-//         const totalFarmers = cRow[0].count;
-//         db.all("SELECT sum(area) as area FROM farmers", (err, aRow) => {
-//             const totalArea = aRow[0].area || 0;
-//              db.all("SELECT * FROM reports ORDER BY id DESC LIMIT 5", (err, reports) => {
-//                  res.render('admin', { totalFarmers, totalArea: totalArea.toFixed(1), deficit: globalDeficit, reports: reports || [] });
-//              });
-//         });
-//     });
-// });
-// Главная админ-страница: список всех фермеров (CRM-style)
+// Главная админ-страница
 app.get('/admin', (req, res) => {
     const { name, oblast, rayon, village, crop } = req.query;
     const filters = { name, oblast, rayon, village, crop };
@@ -171,7 +158,7 @@ app.get('/admin', (req, res) => {
     });
 });
 
-// Страница аналитики
+// Аналитика
 app.get('/admin/analytics', (req, res) => {
     db.all("SELECT oblast, COUNT(*) AS count, SUM(area) AS area FROM farmers GROUP BY oblast", (err, byOblast) => {
         if (err) return res.send("DB error");
@@ -197,7 +184,6 @@ app.post('/admin/set-deficit', (req, res) => {
     globalDeficit = parseInt(req.body.deficit) || 0;
     res.redirect('/admin');
 });
-
 
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS farmers (
@@ -323,32 +309,28 @@ bot.on('text', (ctx, next) => {
         });
     }
 });
+
+// ---------------------------------------------------------------
+//    💧 М О Я   О Ч Е Р Е Д Ь   (сделано РАНДОМНО)
+// ---------------------------------------------------------------
 bot.hears(['💧 Моя очередь', '💧 Менин кезегим'], (ctx) => {
     withUserLang(ctx, (lang) => {
         const txt = TRANSLATIONS[lang];
         db.get('SELECT * FROM farmers WHERE user_id = ?', [ctx.from.id], (err, farmer) => {
             if (!farmer || !farmer.village) return ctx.reply(txt.not_reg);
             
-            let cropMultiplierFarmer = 500;
-            if (farmer.crop) {
-                const cleanCropKey = farmer.crop.split(' ')[1] || farmer.crop.split(' ')[0];
-                cropMultiplierFarmer = CROP_COEFFS[cleanCropKey] || 500;
-            }
-            const demandFarmer = (farmer.area || 0) * cropMultiplierFarmer;
-            const durationFarmer = Math.floor((demandFarmer / 10) * (1 - globalDeficit / 100));
+            // 🔥 RANDOM время для самого пользователя
+            const durationFarmer = Math.floor(Math.random() * 30) + 5; // RANDOM
 
             db.all('SELECT * FROM farmers WHERE village = ? ORDER BY area DESC', [farmer.village], (err, neighbors) => {
                 let msg = `🏡 *${txt.queue_header}: ${farmer.village}*\n📉 ${txt.deficit}: ${globalDeficit}%\n${txt.time}: ${durationFarmer} мин.\n\n`;
+                
                 neighbors.forEach((n, i) => {
-                    let cropMultiplier = 500;
-                    if (n.crop) {
-                        const cleanCropKey = n.crop.split(' ')[1] || n.crop.split(' ')[0];
-                        cropMultiplier = CROP_COEFFS[cleanCropKey] || 500;
-                    }
-                    const demand = (n.area || 0) * cropMultiplier;
-                    const duration = Math.floor((demand / 10) * (1 - globalDeficit / 100));
+                    // 🔥 RANDOM время для каждого соседа
+                    const duration = Math.floor(Math.random() * 30) + 5; // RANDOM
                     msg += `${i+1}. ${n.name} (${n.crop}) - ${duration} мин.\n`;
                 });
+
                 msg += `\n👉 ${SITE_URL}`; 
                 ctx.replyWithMarkdown(msg);
             });
@@ -356,6 +338,7 @@ bot.hears(['💧 Моя очередь', '💧 Менин кезегим'], (ctx
     });
 });
 
+// SOS
 bot.hears(['⚠️ Воды мало!', '⚠️ Суу аз!'], (ctx) => {
     withUserLang(ctx, (lang) => {
         ctx.reply(getTxt(lang, 'sos_confirm'), Markup.inlineKeyboard([
@@ -374,6 +357,7 @@ bot.action('confirm_sos', (ctx) => {
 });
 bot.action('cancel_sos', (ctx) => ctx.deleteMessage());
 
+// Погода
 bot.hears(['☁️ Погода', '☁️ Аба ырайы'], (ctx) => {
     withUserLang(ctx, (lang) => {
         ctx.reply(`${getTxt(lang, 'weather_info')}: ${globalDeficit}%`);
