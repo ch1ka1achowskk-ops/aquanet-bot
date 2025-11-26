@@ -2,78 +2,323 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>AquaNet Admin</title>
+    <title>AquaNet – Админ панель</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --blue-main: #3bbaff;
+            --blue-soft: #d9f2ff;
+            --blue-dark: #1b6fa8;
+            --gray-bg: #f7f9fb;
+            --gray-text: #6b7280;
+            --card-border: rgba(0,0,0,0.08);
+        }
+
+        body {
+            background: var(--gray-bg);
+            color: #1f2937;
+            font-family: "Inter", system-ui, sans-serif;
+        }
+
+        /* NAVIGATION / TOPBAR */
+        .topbar {
+            background: white;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+        .topbar-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--blue-dark);
+        }
+        .topbar-subtitle {
+            font-size: 0.85rem;
+            color: var(--gray-text);
+        }
+
+        .badge-deficit {
+            background: var(--blue-soft);
+            border: 1px solid var(--blue-main);
+            color: var(--blue-dark);
+            border-radius: 50px;
+            padding: 0.35rem 0.9rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .btn-top {
+            font-size: 0.8rem;
+            border-radius: 999px;
+            padding-inline: 0.9rem;
+        }
+        .btn-top-active {
+            background: var(--blue-main);
+            color: white;
+            border: none;
+        }
+        .btn-top-outline {
+            border-color: var(--blue-dark);
+            color: var(--blue-dark);
+        }
+        .btn-top-outline:hover {
+            background: var(--blue-soft);
+        }
+
+        /* PAGE STRUCTURE */
+        .page-wrap {
+            padding: 1.4rem 1.5rem 2.5rem;
+        }
+        .page-title {
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--blue-dark);
+        }
+        .page-subtitle {
+            font-size: 0.9rem;
+            color: var(--gray-text);
+            margin-bottom: 1.2rem;
+        }
+
+        /* FILTER CARD */
+        .filters-card {
+            background: white;
+            border-radius: 1.2rem;
+            border: 1px solid var(--card-border);
+            padding: 1rem 1.2rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            margin-bottom: 1.5rem;
+        }
+        .filters-card-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--blue-dark);
+            margin-bottom: 0.7rem;
+        }
+
+        .filters .form-control,
+        .filters .form-select {
+            background: white;
+            border-radius: 999px;
+            border: 1px solid rgba(0,0,0,0.2);
+            font-size: 0.85rem;
+            padding-inline: 0.85rem;
+        }
+        .filters .form-control:focus,
+        .filters .form-select:focus {
+            border-color: var(--blue-main);
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.3);
+        }
+
+        .btn-filter-primary {
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            color: white;
+            border: none;
+            font-weight: 600;
+            border-radius: 999px;
+        }
+        .btn-filter-primary:hover {
+            filter: brightness(1.07);
+        }
+
+        .btn-filter-secondary {
+            border-color: rgba(0,0,0,0.4);
+            color: #1f2937;
+            border-radius: 999px;
+        }
+
+        /* MAIN CARD */
+        .card-main {
+            background: white;
+            border-radius: 1.2rem;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .card-main-header {
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+        }
+        .card-main-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--blue-dark);
+        }
+        .card-main-meta {
+            font-size: 0.85rem;
+            color: var(--gray-text);
+        }
+
+        /* TABLE */
+        .table-custom thead {
+            background: white;
+            border-bottom: 1px solid var(--card-border);
+        }
+        .table-custom th {
+            color: var(--gray-text);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+        }
+        .table-custom td {
+            font-size: 0.85rem;
+        }
+        .table-custom tbody tr:hover {
+            background-color: var(--blue-soft);
+        }
+
+        .pill-lang {
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            border: 1px solid var(--blue-main);
+            color: var(--blue-dark);
+            font-size: 0.75rem;
+        }
+
+        .pill-irrigation {
+            padding: 0.25rem 0.7rem;
+            border-radius: 999px;
+            background: var(--blue-soft);
+            color: var(--blue-dark);
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .cell-muted {
+            color: var(--gray-text);
+            font-size: 0.78rem;
+        }
+    </style>
 </head>
-<body class="bg-dark text-white">
-    <div class="container mt-5">
-        <h2 class="mb-4">⚙️ AquaNet Control Center</h2>
-        
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card bg-secondary text-white">
-                    <div class="card-body text-center">
-                        <h3><%= totalFarmers %></h3>
-                        <p>Фермеров</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card bg-secondary text-white">
-                    <div class="card-body text-center">
-                        <h3><%= totalArea %> га</h3>
-                        <p>Общая площадь</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card bg-secondary text-white">
-                    <div class="card-body text-center">
-                        <h3><%= deficit %>%</h3>
-                        <p>Текущий дефицит</p>
-                    </div>
-                </div>
-            </div>
+<body>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+    <div class="container-fluid px-3 px-md-4 py-2 d-flex justify-content-between">
+        <div>
+            <div class="topbar-title">💧 AquaNet Admin</div>
+            <div class="topbar-subtitle">Управление фермерами и аналитикой</div>
         </div>
 
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card bg-dark border-secondary">
-                    <div class="card-header border-secondary">🎛 Управление ресурсами</div>
-                    <div class="card-body">
-                        <form action="/admin/set-deficit" method="POST">
-                            <label class="form-label">Установить уровень дефицита воды (%)</label>
-                            <input type="range" class="form-range" name="deficit" min="0" max="100" value="<%= deficit %>" oninput="this.nextElementSibling.value = this.value">
-                            <output><%= deficit %></output>%
-                            <br>
-                            <button type="submit" class="btn btn-danger w-100 mt-2">Обновить систему</button>
-                            <small class="text-muted">Это изменит время полива для всех фермеров автоматически.</small>
-                        </form>
-                    </div>
-                </div>
-            </div>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge-deficit">Дефицит воды: <strong><%= deficit %>%</strong></span>
 
-            <div class="col-md-6">
-                <div class="card bg-dark border-secondary">
-                    <div class="card-header border-secondary">🚨 Последние сигналы (SOS)</div>
-                    <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            <% reports.forEach(function(report) { %>
-                                <li class="list-group-item bg-dark text-white border-secondary">
-                                    <span class="badge bg-danger">SOS</span> 
-                                    ID: <%= report.user_id %> — <%= report.timestamp %>
-                                </li>
-                            <% }); %>
-                            <% if (reports.length === 0) { %>
-                                <p class="text-muted">Жалоб нет.</p>
-                            <% } %>
-                        </ul>
-                    </div>
-                </div>
+            <div class="btn-group">
+                <a href="/admin" class="btn btn-top btn-top-active btn-sm">Фермеры</a>
+                <a href="/admin/analytics" class="btn btn-top btn-top-outline btn-sm">Аналитика</a>
+                <a href="/" class="btn btn-top btn-top-outline btn-sm">Публичный мониторинг</a>
             </div>
         </div>
-        
-        <a href="/" class="btn btn-outline-light mt-4">⬅️ На главную</a>
     </div>
+</nav>
+
+<div class="page-wrap container-fluid">
+
+    <h1 class="page-title">Список фермеров</h1>
+    <p class="page-subtitle">Все данные, отправленные из Telegram-бота AquaNet, отображаются здесь.</p>
+
+    <!-- FILTERS -->
+    <div class="filters-card">
+        <div class="filters-card-title">Фильтрация</div>
+
+        <form class="row g-2 filters" method="GET">
+            <div class="col-6 col-md-2">
+                <input type="text" name="name" class="form-control" placeholder="Имя / ID" value="<%= filters.name || '' %>">
+            </div>
+
+            <div class="col-6 col-md-2">
+                <select name="oblast" class="form-select">
+                    <option value="">Область</option>
+                    <% Object.keys(GEOGRAPHY).forEach(o => { %>
+                    <option value="<%= o %>" <%= filters.oblast === o ? 'selected' : '' %>><%= o %></option>
+                    <% }) %>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <select name="rayon" class="form-select">
+                    <option value="">Район</option>
+                    <% allRayons.forEach(r => { %>
+                    <option value="<%= r %>" <%= filters.rayon === r ? 'selected' : '' %>><%= r %></option>
+                    <% }) %>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <input type="text" name="village" class="form-control" placeholder="Село" value="<%= filters.village || '' %>">
+            </div>
+
+            <div class="col-6 col-md-2">
+                <select name="crop" class="form-select">
+                    <option value="">Культура</option>
+                    <% Object.keys(CROP_COEFFS).forEach(c => { %>
+                    <option value="<%= c %>" <%= filters.crop === c ? 'selected' : '' %>><%= c %></option>
+                    <% }) %>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-2 d-flex gap-2">
+                <button class="btn btn-filter-primary w-100">Фильтр</button>
+                <a href="/admin" class="btn btn-filter-secondary w-100">Сброс</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- MAIN TABLE -->
+    <div class="card-main">
+        <div class="card-main-header">
+            <div class="card-main-title">Все пользователи</div>
+            <div class="card-main-meta">Записей: <strong><%= farmers.length %></strong></div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-custom table-hover mb-0">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>User ID</th>
+                    <th>Имя</th>
+                    <th>Язык</th>
+                    <th>Область</th>
+                    <th>Район</th>
+                    <th>Село</th>
+                    <th>Культура</th>
+                    <th>Площадь</th>
+                    <th>Полив</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                <% if (farmers.length === 0) { %>
+                    <tr>
+                        <td colspan="10" class="text-center cell-muted py-3">Нет данных</td>
+                    </tr>
+                <% } else { %>
+                    <% farmers.forEach((farmer, index) => { %>
+                        <tr>
+                            <td><%= index + 1 %></td>
+                            <td class="cell-muted"><%= farmer.user_id %></td>
+                            <td><%= farmer.name || '—' %></td>
+                            <td><span class="pill-lang"><%= farmer.lang %></span></td>
+                            <td><%= farmer.oblast || '—' %></td>
+                            <td><%= farmer.rayon || '—' %></td>
+                            <td><%= farmer.village || '—' %></td>
+                            <td><%= farmer.crop || '—' %></td>
+                            <td><%= farmer.area || '—' %> га</td>
+                            <td>
+                                <% if (farmer.duration) { %>
+                                <span class="pill-irrigation"><%= farmer.duration %> мин</span>
+                                <% } else { %>
+                                <span class="cell-muted">–</span>
+                                <% } %>
+                            </td>
+                        </tr>
+                    <% }) %>
+                <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

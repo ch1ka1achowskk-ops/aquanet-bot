@@ -13,7 +13,8 @@ let globalDeficit = 20;
 
 const bot = new Telegraf(BOT_TOKEN);
 const app = express();
-const db = new sqlite3.Database('aquanet.db');
+const path = require('path');
+const db = new sqlite3.Database(path.join(__dirname, 'aquanet.db'))
 
 const TRANSLATIONS = {
     ru: {
@@ -98,14 +99,96 @@ app.get('/', (req, res) => {
     });
 });
 
+// app.get('/admin', (req, res) => {
+//     db.all("SELECT count(*) as count FROM farmers", (err, cRow) => {
+//         const totalFarmers = cRow[0].count;
+//         db.all("SELECT sum(area) as area FROM farmers", (err, aRow) => {
+//             const totalArea = aRow[0].area || 0;
+//              db.all("SELECT * FROM reports ORDER BY id DESC LIMIT 5", (err, reports) => {
+//                  res.render('admin', { totalFarmers, totalArea: totalArea.toFixed(1), deficit: globalDeficit, reports: reports || [] });
+//              });
+//         });
+//     });
+// });
+// Главная админ-страница: список всех фермеров (CRM-style)
 app.get('/admin', (req, res) => {
-    db.all("SELECT count(*) as count FROM farmers", (err, cRow) => {
-        const totalFarmers = cRow[0].count;
-        db.all("SELECT sum(area) as area FROM farmers", (err, aRow) => {
-            const totalArea = aRow[0].area || 0;
-             db.all("SELECT * FROM reports ORDER BY id DESC LIMIT 5", (err, reports) => {
-                 res.render('admin', { totalFarmers, totalArea: totalArea.toFixed(1), deficit: globalDeficit, reports: reports || [] });
-             });
+    const { name, oblast, rayon, village, crop } = req.query;
+    const filters = { name, oblast, rayon, village, crop };
+
+    let sql = "SELECT * FROM farmers";
+    const where = [];
+    const params = [];
+
+    if (name) {
+        where.push("name LIKE ?");
+        params.push('%' + name + '%');
+    }
+    if (oblast) {
+        where.push("oblast = ?");
+        params.push(oblast);
+    }
+    if (rayon) {
+        where.push("rayon = ?");
+        params.push(rayon);
+    }
+    if (village) {
+        where.push("village LIKE ?");
+        params.push('%' + village + '%');
+    }
+    if (crop) {
+        where.push("crop = ?");
+        params.push(crop);
+    }
+
+    if (where.length) {
+        sql += " WHERE " + where.join(" AND ");
+    }
+    sql += " ORDER BY village ASC, area DESC";
+
+    db.all(sql, params, (err, rows) => {
+        if (err) return res.send("DB error");
+
+        rows.forEach(row => {
+            let cropMultiplier = 500;
+            if (row.crop) {
+                const cleanCropKey = row.crop.split(' ')[1] || row.crop.split(' ')[0];
+                cropMultiplier = CROP_COEFFS[cleanCropKey] || 500;
+            }
+            const demand = (row.area || 0) * cropMultiplier;
+            row.duration = Math.floor((demand / 10) * (1 - globalDeficit / 100));
+        });
+
+        const allRayons = Array.from(new Set(Object.values(GEOGRAPHY).flat()));
+
+        res.render('admin', {
+            filters,
+            farmers: rows,
+            GEOGRAPHY,
+            CROP_COEFFS,
+            allRayons,
+            deficit: globalDeficit
+        });
+    });
+});
+
+// Страница аналитики
+app.get('/admin/analytics', (req, res) => {
+    db.all("SELECT oblast, COUNT(*) AS count, SUM(area) AS area FROM farmers GROUP BY oblast", (err, byOblast) => {
+        if (err) return res.send("DB error");
+        db.all("SELECT crop, COUNT(*) AS count, SUM(area) AS area FROM farmers GROUP BY crop", (err2, byCrop) => {
+            if (err2) return res.send("DB error");
+            db.get("SELECT COUNT(*) AS count, SUM(area) AS area FROM farmers", (err3, totalRow) => {
+                const totalFarmers = totalRow?.count || 0;
+                const totalArea = totalRow?.area || 0;
+
+                res.render('analytics', {
+                    byOblast: byOblast || [],
+                    byCrop: byCrop || [],
+                    totalFarmers,
+                    totalArea,
+                    deficit: globalDeficit
+                });
+            });
         });
     });
 });

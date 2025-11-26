@@ -2,55 +2,203 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>AquaNet Dashboard</title>
+    <title>AquaNet – Публичный мониторинг</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <meta http-equiv="refresh" content="30"> </head>
-<body class="bg-light">
-    <nav class="navbar navbar-dark bg-primary mb-4">
-        <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1">💧 AquaNet: Публичный мониторинг</span>
-            <span class="text-white">Текущий дефицит воды: <strong><%= deficit %>%</strong></span>
-        </div>
-    </nav>
+    <meta http-equiv="refresh" content="30">
 
-    <div class="container">
-        <% if (Object.keys(villages).length === 0) { %>
-            <div class="alert alert-warning">Нет данных о фермерах. Зарегистрируйтесь через бота!</div>
-        <% } %>
+    <style>
+        :root {
+            --blue-main: #3bbaff;
+            --blue-soft: #d9f2ff;
+            --blue-dark: #1b6fa8;
+            --gray-light: #f7f9fb;
+            --gray-text: #6b7280;
+            --card-border: rgba(0,0,0,0.08);
+        }
 
-        <div class="row">
-            <% Object.keys(villages).forEach(function(villageName) { %>
-                <div class="col-md-6 mb-4">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-success text-white d-flex justify-content-between">
-                            <h5 class="mb-0">🏡 Айыл: <%= villageName %></h5>
-                        </div>
-                        <div class="card-body p-0">
-                            <table class="table table-striped mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Фермер</th>
-                                        <th>Культура</th>
-                                        <th>Полив (мин)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <% villages[villageName].forEach(function(farmer, index) { %>
-                                        <tr>
-                                            <td><%= index + 1 %></td>
-                                            <td><%= farmer.name %></td>
-                                            <td><%= farmer.crop %></td>
-                                            <td><strong><%= farmer.duration %> мин</strong></td>
-                                        </tr>
-                                    <% }); %>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            <% }); %>
-        </div>
+        body {
+            background: var(--gray-light);
+            color: #1f2937;
+            font-family: "Inter", system-ui, sans-serif;
+        }
+
+        /* NAVBAR */
+        .navbar {
+            background: white;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+            padding-top: 0.9rem;
+            padding-bottom: 0.9rem;
+        }
+        .navbar-brand {
+            font-weight: 600;
+            color: var(--blue-dark);
+        }
+        .badge-deficit {
+            background: var(--blue-soft);
+            border: 1px solid var(--blue-main);
+            color: var(--blue-dark);
+            border-radius: 50px;
+            padding: 0.35rem 0.9rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Titles */
+        .page-title {
+            margin-top: 1.5rem;
+            font-size: 1.7rem;
+            font-weight: 700;
+            color: var(--blue-dark);
+        }
+        .page-subtitle {
+            color: var(--gray-text);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Cards */
+        .village-card {
+            background: white;
+            border-radius: 1.25rem;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            overflow: hidden;
+            transition: transform 0.1s ease;
+        }
+        .village-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .village-header {
+            padding: 0.85rem 1.3rem;
+            background: var(--blue-soft);
+            border-bottom: 1px solid var(--card-border);
+        }
+        .village-name {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--blue-dark);
+        }
+
+        .village-meta {
+            font-size: 0.85rem;
+            color: var(--gray-text);
+        }
+
+        /* Table */
+        .table-custom thead {
+            background: white;
+            border-bottom: 1px solid var(--card-border);
+        }
+        .table-custom th {
+            color: #6b7280;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .table-custom td {
+            font-size: 0.9rem;
+        }
+        .table-custom tbody tr:hover {
+            background: #f0faff;
+        }
+
+        /* Полив-бейдж */
+        .pill-time {
+            display: inline-block;
+            padding: .2rem .7rem;
+            border-radius: 50px;
+            background: var(--blue-soft);
+            color: var(--blue-dark);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            background: white;
+            border-radius: 1rem;
+            border: 1px dashed var(--blue-main);
+            padding: 1rem 1.25rem;
+            font-size: 0.95rem;
+            color: #1f2937;
+        }
+
+        .footer-note {
+            margin-top: 1.7rem;
+            font-size: 0.8rem;
+            color: var(--gray-text);
+        }
+    </style>
+</head>
+
+
+<body>
+
+<nav class="navbar">
+    <div class="container-fluid px-3 px-md-4 d-flex justify-content-between">
+        <span class="navbar-brand">💧 AquaNet · Публичный мониторинг</span>
+
+        <span class="badge-deficit">
+            Дефицит воды: <strong><%= deficit %>%</strong>
+        </span>
     </div>
+</nav>
+
+
+<div class="container py-4">
+
+    <h1 class="page-title">Схема полива по сёлам</h1>
+    <p class="page-subtitle">Обновление каждые 30 секунд | Данные из Telegram-бота AquaNet</p>
+
+    <% if (Object.keys(villages).length === 0) { %>
+        <div class="empty-state mb-4">
+            Нет данных о фермерах. Зарегистрируйтесь через бот AquaNet, чтобы увидеть живую очередь.
+        </div>
+    <% } %>
+
+    <div class="row g-4">
+        <% Object.keys(villages).forEach(function(villageName) { %>
+            <div class="col-12 col-lg-6">
+                <div class="village-card">
+                    <div class="village-header">
+                        <h5 class="village-name">🏡 Айыл: <%= villageName %></h5>
+                        <div class="village-meta">Фермеров: <%= villages[villageName].length %></div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-custom table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;">#</th>
+                                    <th>Фермер</th>
+                                    <th>Культура</th>
+                                    <th style="width: 90px;">Полив</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <% villages[villageName].forEach(function(farmer, index) { %>
+                                    <tr>
+                                        <td><%= index + 1 %></td>
+                                        <td><%= farmer.name %></td>
+                                        <td><%= farmer.crop %></td>
+                                        <td><span class="pill-time"><%= farmer.duration %> мин</span></td>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        <% }); %>
+    </div>
+
+    <div class="footer-note">
+        Для управления системой и аналитики — используйте админ-панель AquaNet.
+    </div>
+</div>
+
 </body>
 </html>
