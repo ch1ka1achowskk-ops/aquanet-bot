@@ -5,8 +5,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const PORT = process.env.PORT || 3000;
-const SITE_URL = 'http://localhost:' + PORT; 
+const PORT = 3000;
+const SITE_URL = 'http://localhost:3000'; 
 const ADMIN_PASSWORD = "admin";
 
 let globalDeficit = 20; 
@@ -14,7 +14,6 @@ let globalDeficit = 20;
 const bot = new Telegraf(BOT_TOKEN);
 const app = express();
 const db = new sqlite3.Database('aquanet.db');
-
 const TRANSLATIONS = {
     ru: {
         welcome: "Добро пожаловать в AquaNet! 💧\nПожалуйста, выберите язык:",
@@ -22,7 +21,8 @@ const TRANSLATIONS = {
         menu_reg: "📝 Регистрация / Изм.",
         menu_report: "⚠️ Воды мало!",
         menu_weather: "☁️ Погода",
-        menu_site: "🌐 Открыть сайт",
+        menu_site: "🌐 Открыть сайт", 
+        reg_name: "Введите ваше имя:",
         reg_step1: "1-шаг: Выберите область:",
         reg_step2: "2-шаг: Выберите район:",
         reg_step3: "3-шаг: Напишите название села (вручную):",
@@ -49,6 +49,7 @@ const TRANSLATIONS = {
         menu_report: "⚠️ Суу аз!",
         menu_weather: "☁️ Аба ырайы",
         menu_site: "🌐 Сайтты ачуу", 
+        reg_name: "Атыңызды жазыңыз:",
         reg_step1: "1-кадам: Облусту тандаңыз:",
         reg_step2: "2-кадам: Районду тандаңыз:",
         reg_step3: "3-кадам: Айылдын атын жазыңыз (кол менен):",
@@ -75,21 +76,18 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
 app.get('/', (req, res) => {
-
     db.all("SELECT * FROM farmers ORDER BY area DESC", (err, rows) => {
         const villages = {};
         rows.forEach(row => {
             if (!villages[row.village]) villages[row.village] = [];
            let cropMultiplier = 500;
         if (row.crop) {
-            const cropKey = row.crop.split(' ')[0]; // Например: "🌾 Буудай" -> "🌾"
-            // Важно: в базе хранятся полные названия с эмодзи. CROP_COEFFS использует ключ 'Буудай'. 
-            // Нужно убедиться, что ключом является сам текст без эмодзи.
-            const cleanCropKey = row.crop.split(' ')[1] || row.crop.split(' ')[0]; // Берем второе слово ('Буудай') или первое
+            const cropKey = row.crop.split(' ')[0]; 
+            const cleanCropKey = row.crop.split(' ')[1] || row.crop.split(' ')[0]; 
             cropMultiplier = CROP_COEFFS[cleanCropKey] || 500;
         }
         
-        let demand = (row.area || 0) * cropMultiplier
+        let demand = (row.area || 0) * cropMultiplier;
             let duration = Math.floor((demand / 10) * (1 - globalDeficit/100));
             row.duration = duration;
             villages[row.village].push(row);
@@ -114,7 +112,6 @@ app.post('/admin/set-deficit', (req, res) => {
     globalDeficit = parseInt(req.body.deficit) || 0;
     res.redirect('/admin');
 });
-
 
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS farmers (
@@ -143,6 +140,7 @@ const CROP_COEFFS = {
 };
 
 const userState = {}; 
+
 function getTxt(lang, key) {
     return TRANSLATIONS[lang || 'ru'][key] || TRANSLATIONS['ru'][key];
 }
@@ -155,10 +153,12 @@ bot.start((ctx) => {
         ])
     );
 });
+
 bot.action(/set_lang_(.+)/, (ctx) => {
     const lang = ctx.match[1]; 
     const userId = ctx.from.id;
     const name = ctx.from.first_name;
+
     db.run(`INSERT OR REPLACE INTO farmers (user_id, name, lang) VALUES (?, ?, COALESCE((SELECT lang FROM farmers WHERE user_id=?), ?))`, 
     [userId, name, userId, lang], (err) => {
         db.run(`UPDATE farmers SET lang = ? WHERE user_id = ?`, [lang, userId]);
@@ -181,15 +181,15 @@ function showMainMenu(ctx, lang) {
 const withUserLang = (ctx, callback) => {
     const userId = ctx.from.id;
     db.get("SELECT lang FROM farmers WHERE user_id = ?", [userId], (err, row) => {
-        const lang = row ? row.lang : 'ru';
+        const lang = row ? row.lang : 'ru'; 
         callback(lang);
     });
 };
 
 bot.hears(['📝 Регистрация / Изм.', '📝 Катталуу / Өзгөртүү'], (ctx) => {
     withUserLang(ctx, (lang) => {
-        userState[ctx.from.id] = { step: 'OBLAST', lang: lang };
-        ctx.reply(getTxt(lang, 'reg_step1'), Markup.keyboard(Object.keys(GEOGRAPHY).map(d => [d])).oneTime().resize());
+        userState[ctx.from.id] = { step: 'NAME', lang: lang };
+        ctx.reply(getTxt(lang, 'reg_name'), Markup.removeKeyboard());
     });
 });
 
@@ -209,6 +209,11 @@ bot.on('text', (ctx, next) => {
     const lang = state.lang;
     const txt = TRANSLATIONS[lang];
 
+    if (state.step === 'NAME') {
+        state.name = text;
+        state.step = 'OBLAST';
+        return ctx.reply(getTxt(lang, 'reg_step1'), Markup.keyboard(Object.keys(GEOGRAPHY).map(d => [d])).oneTime().resize());
+    }
     if (state.step === 'OBLAST') {
         if (!GEOGRAPHY[text]) return ctx.reply(txt.choose_list);
         state.oblast = text;
@@ -231,8 +236,8 @@ bot.on('text', (ctx, next) => {
         const area = parseFloat(text.replace(',', '.'));
         if(isNaN(area)) return ctx.reply(txt.error_num);
         
-        db.run(`UPDATE farmers SET oblast=?, rayon=?, village=?, area=?, crop=? WHERE user_id=?`,
-        [state.oblast, state.rayon, state.village, area, state.crop, userId], 
+        db.run(`UPDATE farmers SET name=?, oblast=?, rayon=?, village=?, area=?, crop=? WHERE user_id=?`,
+        [state.name, state.oblast, state.rayon, state.village, area, state.crop, userId], 
         () => {
             delete userState[userId];
             ctx.reply(`${txt.saved}\n\n${txt.site_link} ${SITE_URL}`);
@@ -240,6 +245,7 @@ bot.on('text', (ctx, next) => {
         });
     }
 });
+
 bot.hears(['💧 Моя очередь', '💧 Менин кезегим'], (ctx) => {
     withUserLang(ctx, (lang) => {
         const txt = TRANSLATIONS[lang];
@@ -284,7 +290,7 @@ bot.hears(['☁️ Погода', '☁️ Аба ырайы'], (ctx) => {
 
 bot.launch();
 app.listen(PORT, () => {
-    console.log(`Site: ${PORT}`);
+    console.log(`Site: ${SITE_URL}`);
     console.log(`Bot running...`);
 });
 
