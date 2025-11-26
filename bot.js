@@ -6,7 +6,7 @@ const bodyParser = require('body-parser');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const PORT = process.env.PORT || 3000;
-const SITE_URL = 'http://localhost:' + PORT; 
+const SITE_URL = 'https://aquanet-bot-anfn.onrender.com/'; 
 const ADMIN_PASSWORD = "admin";
 
 let globalDeficit = 20; 
@@ -329,10 +329,25 @@ bot.hears(['💧 Моя очередь', '💧 Менин кезегим'], (ctx
         db.get('SELECT * FROM farmers WHERE user_id = ?', [ctx.from.id], (err, farmer) => {
             if (!farmer || !farmer.village) return ctx.reply(txt.not_reg);
             
-            db.all('SELECT * FROM farmers WHERE village = ?', [farmer.village], (err, neighbors) => {
-                let msg = `🏡 *${txt.queue_header}: ${farmer.village}*\n📉 ${txt.deficit}: ${globalDeficit}%\n\n`;
+            let cropMultiplierFarmer = 500;
+            if (farmer.crop) {
+                const cleanCropKey = farmer.crop.split(' ')[1] || farmer.crop.split(' ')[0];
+                cropMultiplierFarmer = CROP_COEFFS[cleanCropKey] || 500;
+            }
+            const demandFarmer = (farmer.area || 0) * cropMultiplierFarmer;
+            const durationFarmer = Math.floor((demandFarmer / 10) * (1 - globalDeficit / 100));
+
+            db.all('SELECT * FROM farmers WHERE village = ? ORDER BY area DESC', [farmer.village], (err, neighbors) => {
+                let msg = `🏡 *${txt.queue_header}: ${farmer.village}*\n📉 ${txt.deficit}: ${globalDeficit}%\n${txt.time}: ${durationFarmer} мин.\n\n`;
                 neighbors.forEach((n, i) => {
-                     msg += `${i+1}. ${n.name} (${n.crop})\n`;
+                    let cropMultiplier = 500;
+                    if (n.crop) {
+                        const cleanCropKey = n.crop.split(' ')[1] || n.crop.split(' ')[0];
+                        cropMultiplier = CROP_COEFFS[cleanCropKey] || 500;
+                    }
+                    const demand = (n.area || 0) * cropMultiplier;
+                    const duration = Math.floor((demand / 10) * (1 - globalDeficit / 100));
+                    msg += `${i+1}. ${n.name} (${n.crop}) - ${duration} мин.\n`;
                 });
                 msg += `\n👉 ${SITE_URL}`; 
                 ctx.replyWithMarkdown(msg);
@@ -367,7 +382,7 @@ bot.hears(['☁️ Погода', '☁️ Аба ырайы'], (ctx) => {
 
 bot.launch();
 app.listen(PORT, () => {
-    console.log(`Site: ${PORT}`);
+    console.log(`Site: ${SITE_URL}`);
     console.log(`Bot running...`);
 });
 
