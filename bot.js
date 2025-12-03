@@ -328,7 +328,7 @@ bot.hears(['💧 Моя очередь', '💧 Менин кезегим'], (ctx
                 neighbors.forEach((n, i) => {
                     // 🔥 RANDOM время для каждого соседа
                     const duration = Math.floor(Math.random() * 30) + 5; // RANDOM
-                    msg += `${i+1}. ${n.name} (${n.crop}) - ${duration} мин.\n`;
+                    msg += `в ${i+1}. ${n.name} (${n.crop}) - ${duration} .\n`;
                 });
 
                 msg += `\n👉 ${SITE_URL}`; 
